@@ -1,0 +1,26 @@
+{
+  "success": true,
+  "data": {
+    "device_id": "meter_demo_01",
+    "timestamp": "2026-09-30T19:48:38.203776",
+    "telemetry": {
+      "power_kw": 5.56,
+      "voltage": 220.5,
+      "current": 25.22,
+      "request_rate": 4,
+      "failed_auth_attempts": 0
+    },
+    "security": {
+      "trust_score": 100,
+      "trust_status": "TRUSTED",
+      "severity": "LOW",
+      "anomalies": [],
+      "event_type": "NORMAL_OPERATION",
+      "recommended_action": "ALLOW"
+    },
+    "prediction": {
+      "predicted_load_kw": 5.56,
+      "confidence": 0.85
+    }
+  }
+}

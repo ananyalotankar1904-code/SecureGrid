@@ -1,0 +1,28 @@
+{
+  "success": true,
+  "data": {
+    "device_id": "meter_demo_01",
+    "timestamp": "2026-09-30T19:48:38.210699",
+    "telemetry": {
+      "power_kw": 4.09,
+      "voltage": 229.8,
+      "current": 17.8,
+      "request_rate": 655,
+      "failed_auth_attempts": 0
+    },
+    "security": {
+      "trust_score": 60,
+      "trust_status": "SUSPICIOUS",
+      "severity": "MEDIUM",
+      "anomalies": [
+        "NETWORK_ANOMALY"
+      ],
+      "event_type": "SUSPICIOUS_BEHAVIOR",
+      "recommended_action": "MONITOR"
+    },
+    "prediction": {
+      "predicted_load_kw": 7.47,
+      "confidence": 0.85
+    }
+  }
+}

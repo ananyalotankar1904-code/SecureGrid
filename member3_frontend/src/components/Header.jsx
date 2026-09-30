@@ -8,7 +8,8 @@ export function Header({
   isLiveApi, 
   onRefresh, 
   autoRefresh, 
-  onToggleAutoRefresh 
+  onToggleAutoRefresh,
+  onScenarioChange
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -76,6 +77,14 @@ export function Header({
             );
           })}
         </nav>
+
+        {/* Demo Controls */}
+        <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto', marginRight: '16px' }}>
+          <button className="btn-refresh" onClick={() => onScenarioChange('NORMAL')} style={{ backgroundColor: 'var(--color-allow)', color: '#000' }}>NORMAL</button>
+          <button className="btn-refresh" onClick={() => onScenarioChange('ENERGY_ANOMALY')} style={{ backgroundColor: 'var(--color-monitor)', color: '#000' }}>ENERGY</button>
+          <button className="btn-refresh" onClick={() => onScenarioChange('DDOS')} style={{ backgroundColor: 'var(--color-monitor)', color: '#000' }}>DDOS</button>
+          <button className="btn-refresh" onClick={() => onScenarioChange('COMPROMISE')} style={{ backgroundColor: 'var(--color-quarantine)', color: '#fff' }}>COMPROMISE</button>
+        </div>
 
         {/* System Meta & Refresh Controls */}
         <div className="header-meta">

@@ -17,6 +17,7 @@ This folder contains the work for Member 2 in the SecureGrid hackathon project. 
 - `anomaly_detection/` - Core logic for energy & network anomalies
 - `trust_engine/` - Logic for dynamic trust score assessment and security events
 - `prediction/` - EWMA ML model for load forecasting
+- `integration/` - Frontend adapter and demo data fixtures for Member 3
 
 ## 3. Telemetry Schema
 All components consume and produce data based on this canonical structure:
@@ -78,12 +79,13 @@ pip install -r requirements.txt
 ## 11. How to Run Locally (Simulator)
 Update your `.env` or configuration in `simulator/config.py`. You do NOT need a running MQTT broker; it will default to a local printing simulation if connection fails.
 ```bash
-python -m simulator.device_simulator
+python -m member2_iot_ml.simulator.device_simulator
 ```
 
 ## 12. How to Run Tests
 ```bash
-python test_end_to_end.py
+python -m unittest member2_iot_ml.test_end_to_end
+python -m unittest member2_iot_ml.test_integration
 ```
 
 ## 13. Integration Interfaces
@@ -102,12 +104,66 @@ if security_event["recommended_action"] == "QUARANTINE":
     execute_quarantine(device_id)
 ```
 
-## 14. How Member 3 Consumes Outputs
-Member 3 (React Dashboard) expects JSON. The `predict_load(telemetry)` function from `member2_iot_ml.prediction.load_prediction` returns a structured dict suitable for `json.dumps()`:
+## 14. Frontend Integration Contract
+Member 3 can use the `member2_iot_ml/integration/frontend_adapter.py` to get a structured JSON payload ready for the dashboard. 
+
+**Adapter Function:**
+```python
+from member2_iot_ml.integration.frontend_adapter import process_for_frontend
+result = process_for_frontend(telemetry)
+```
+
+**Successful JSON Output:**
 ```json
 {
-  "timestamp": "2026-09-30T14:15:00",
-  "predicted_load_kw": 5.8,
-  "confidence": 0.85
+  "success": true,
+  "data": {
+    "device_id": "meter_demo_01",
+    "timestamp": "2026-09-30T14:15:00",
+    "telemetry": {
+      "power_kw": 5.2,
+      "voltage": 230.0,
+      "current": 22.6,
+      "request_rate": 5,
+      "failed_auth_attempts": 0
+    },
+    "security": {
+      "trust_score": 100,
+      "trust_status": "TRUSTED",
+      "severity": "LOW",
+      "anomalies": [],
+      "event_type": "NORMAL_OPERATION",
+      "recommended_action": "ALLOW"
+    },
+    "prediction": {
+      "predicted_load_kw": 5.8,
+      "confidence": 0.85
+    }
+  }
 }
 ```
+
+**Error JSON Output:**
+```json
+{
+  "success": false,
+  "error": "Invalid telemetry",
+  "details": ["Missing required field: power_kw"]
+}
+```
+
+**Understanding the Result:**
+- `trust_status`: TRUSTED, SUSPICIOUS, HIGH_RISK
+- `severity`: LOW, MEDIUM, HIGH
+- `recommended_action`: 
+  - `ALLOW` = Normal/acceptable behavior.
+  - `MONITOR` = Suspicious behavior requiring observation.
+  - `RESTRICT` = Elevated restriction (e.g. auth issues).
+  - `QUARANTINE` = High-risk device. Member 1's backend handles actual isolation.
+
+**Demo Commands for Member 3:**
+You can generate deterministic JSON fixtures immediately:
+```bash
+python -m member2_iot_ml.integration.demo_frontend_data
+```
+Outputs are saved into `member2_iot_ml/integration/demo_data/`.

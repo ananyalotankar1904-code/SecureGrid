@@ -11,6 +11,32 @@ let isLiveApiAvailable = false;
 // Initial Grid Devices Dataset based on Member 2 Smart Grid telemetry attributes
 let mockDevices = [
   {
+    id: 'meter_demo_01',
+    name: 'Hackathon Demo Meter',
+    type: 'Smart Meter',
+    location: 'Demo Zone',
+    status: 'Healthy',
+    trustScore: 100,
+    powerKw: 5.56,
+    baselinePowerKw: 5.50,
+    voltageV: 220.5,
+    currentA: 25.22,
+    frequencyHz: 60.0,
+    anomalyType: 'Normal',
+    anomalies: { energy: false, network: false, ddos: false, auth: false, combined: false },
+    recommendation: 'ALLOW',
+    lastSeen: 'Just now',
+    ipAddress: '192.168.1.100',
+    firmware: 'v1.0.0',
+    explanation: 'System operating normally.',
+    trustHistory: [
+      { time: '12:00', score: 100 },
+      { time: '12:15', score: 100 },
+      { time: '12:30', score: 100 },
+      { time: '12:45', score: 100 }
+    ]
+  },
+  {
     id: 'SUB-TX-101',
     name: 'Substation Transformer 101',
     type: 'Substation Transformer',
@@ -464,11 +490,78 @@ export async function updateDeviceRecommendation(deviceId, newRecommendation) {
 export function simulateTelemetryTick() {
   // Randomly oscillate a non-quarantined device's power slightly
   mockDevices.forEach(d => {
-    if (d.status !== 'Quarantined') {
+    if (d.status !== 'Quarantined' && d.id !== 'meter_demo_01') {
       const delta = (Math.random() - 0.5) * 4.0;
       d.powerKw = Math.max(0, Math.round((d.powerKw + delta) * 10) / 10);
       d.lastSeen = 'Just now';
     }
   });
   return [...mockDevices];
+}
+
+const member2DemoScenarios = {
+  NORMAL: {
+    powerKw: 5.56, requestRate: 4, failedAuth: 0,
+    trustScore: 100, status: 'Healthy', recommendation: 'ALLOW',
+    anomalies: { energy: false, network: false, ddos: false, auth: false, combined: false },
+    anomalyType: 'Normal', severity: 'LOW',
+    explanation: 'System operating normally. No anomalies detected.',
+  },
+  ENERGY_ANOMALY: {
+    powerKw: 16.75, requestRate: 8, failedAuth: 0,
+    trustScore: 70, status: 'Warning', recommendation: 'MONITOR',
+    anomalies: { energy: true, network: false, ddos: false, auth: false, combined: false },
+    anomalyType: 'Energy', severity: 'MEDIUM',
+    explanation: 'power consumption significantly above expected range',
+  },
+  DDOS: {
+    powerKw: 4.09, requestRate: 655, failedAuth: 0,
+    trustScore: 60, status: 'Warning', recommendation: 'MONITOR',
+    anomalies: { energy: false, network: true, ddos: true, auth: false, combined: false },
+    anomalyType: 'DDoS', severity: 'MEDIUM',
+    explanation: 'abnormally high request rate',
+  },
+  COMPROMISE: {
+    powerKw: 39.39, requestRate: 689, failedAuth: 13,
+    trustScore: 10, status: 'Quarantined', recommendation: 'QUARANTINE',
+    anomalies: { energy: true, network: true, ddos: true, auth: true, combined: true },
+    anomalyType: 'Combined', severity: 'HIGH',
+    explanation: 'power consumption significantly above expected range, abnormally high request rate, authentication failures detected',
+  }
+};
+
+export async function setDemoScenario(scenarioName) {
+  const scenario = member2DemoScenarios[scenarioName];
+  if (!scenario) return;
+
+  const dev = mockDevices.find(d => d.id === 'meter_demo_01');
+  if (dev) {
+    dev.powerKw = scenario.powerKw;
+    dev.trustScore = scenario.trustScore;
+    dev.status = scenario.status;
+    dev.recommendation = scenario.recommendation;
+    dev.anomalies = { ...scenario.anomalies };
+    dev.anomalyType = scenario.anomalyType;
+    dev.explanation = scenario.explanation;
+    
+    // Add to history
+    dev.trustHistory.push({ time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), score: dev.trustScore });
+    if(dev.trustHistory.length > 10) dev.trustHistory.shift();
+
+    // Update threat events
+    mockThreatEvents = mockThreatEvents.filter(e => e.deviceId !== 'meter_demo_01');
+    if (scenarioName !== 'NORMAL') {
+      mockThreatEvents.unshift({
+        id: 'EVT-DEMO-' + Date.now(),
+        timestamp: new Date().toLocaleString(),
+        deviceId: 'meter_demo_01',
+        anomalyType: scenario.anomalyType.toUpperCase(),
+        severity: scenario.severity.toUpperCase(),
+        trustScore: scenario.trustScore,
+        recommendation: scenario.recommendation,
+        status: 'ACTIVE',
+        details: scenario.explanation
+      });
+    }
+  }
 }

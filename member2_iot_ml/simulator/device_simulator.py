@@ -5,7 +5,13 @@ from .config import MQTT_BROKER_HOST, MQTT_BROKER_PORT, MQTT_USERNAME, MQTT_PASS
 from .telemetry_generator import generate_telemetry
 
 def get_mqtt_client(client_id):
-    client = mqtt.Client(client_id=client_id)
+    try:
+        # Handle paho-mqtt 2.x requirement for CallbackAPIVersion
+        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, client_id=client_id)
+    except AttributeError:
+        # Fallback for paho-mqtt 1.x
+        client = mqtt.Client(client_id=client_id)
+        
     if MQTT_USERNAME and MQTT_PASSWORD:
         client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
     return client

@@ -5,7 +5,8 @@ import {
   getThreatEvents, 
   checkApiHealth, 
   updateDeviceRecommendation,
-  simulateTelemetryTick 
+  simulateTelemetryTick,
+  setDemoScenario
 } from '../services/api';
 import { Header } from './Header';
 import { OverviewPage } from './OverviewPage';
@@ -88,6 +89,15 @@ export function Dashboard() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleScenarioChange = async (scenario) => {
+    await setDemoScenario(scenario);
+    // ensure we are on security_energy page for the demo, or overview
+    await loadData();
+    // Select the demo device automatically
+    const dev = devices.find(d => d.id === 'meter_demo_01');
+    if (dev) setSelectedDevice(dev);
+  };
+
   return (
     <div className="app-container">
       {/* Persistent Navigation Header */}
@@ -99,6 +109,7 @@ export function Dashboard() {
         onRefresh={loadData}
         autoRefresh={autoRefresh}
         onToggleAutoRefresh={() => setAutoRefresh(!autoRefresh)}
+        onScenarioChange={handleScenarioChange}
       />
 
       {/* Main Page Render (3 Main Pages Only) */}
