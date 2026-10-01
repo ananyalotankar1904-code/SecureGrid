@@ -2,6 +2,7 @@ import uuid
 import logging
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any, Tuple
+from supabase import create_client
 from member1_backend_edge.backend.config import settings
 
 logger = logging.getLogger("securegrid.db")
@@ -35,7 +36,6 @@ class DatabaseService:
             return
 
         try:
-            from supabase import create_client
             client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
             
             # Execute a lightweight query to verify live network connectivity and table existence

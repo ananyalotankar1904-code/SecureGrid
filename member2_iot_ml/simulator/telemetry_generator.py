@@ -39,6 +39,7 @@ def generate_telemetry(device_id: str, mode: str = "normal", seed=None) -> dict:
         
     return {
         "device_id": device_id,
+        "auth_token": f"valid-token-{device_id}",
         "timestamp": timestamp,
         "power_kw": power_kw,
         "voltage": voltage,
