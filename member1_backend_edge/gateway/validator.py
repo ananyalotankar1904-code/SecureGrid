@@ -84,20 +84,20 @@ class TelemetryValidator:
         # Voltage physical boundaries
         if voltage <= 0.0:
             return False, f"Voltage must be strictly positive (> 0.0V), got: {voltage}V", None
-        if voltage < VOLTAGE_MIN_V or voltage > 500.0:
-            return False, f"Voltage {voltage}V is outside plausible grid boundary [{VOLTAGE_MIN_V}V, 500.0V]", None
+        if voltage < VOLTAGE_MIN_V or voltage > 2000.0:
+            return False, f"Voltage {voltage}V is outside plausible grid boundary [{VOLTAGE_MIN_V}V, 2000.0V]", None
 
         # Power boundaries
-        if power_kw < POWER_MIN_KW or power_kw > 100.0:
-            return False, f"Power {power_kw}kW is outside physical limits [{POWER_MIN_KW}kW, 100.0kW]", None
+        if power_kw < POWER_MIN_KW or power_kw > 2000.0:
+            return False, f"Power {power_kw}kW is outside physical limits [{POWER_MIN_KW}kW, 2000.0kW]", None
 
         # Current boundaries
-        if current < CURRENT_MIN_A or current > 200.0:
-            return False, f"Current {current}A is outside physical limits [{CURRENT_MIN_A}A, 200.0A]", None
+        if current < CURRENT_MIN_A or current > 1000.0:
+            return False, f"Current {current}A is outside physical limits [{CURRENT_MIN_A}A, 1000.0A]", None
 
         # Rate boundary
-        if request_rate < 0.0 or request_rate > 50.0:
-            return False, f"Request rate {request_rate}Hz is outside valid bounds [0.0, 50.0]", None
+        if request_rate < 0.0 or request_rate > 2000.0:
+            return False, f"Request rate {request_rate}Hz is outside valid bounds [0.0, 2000.0]", None
 
         # Failed auth attempts
         if failed_auth_attempts < 0:

@@ -272,6 +272,8 @@ class DatabaseService:
     # Security Events
     # =========================================================================
 
+    def save_security_event(self, event_data: Dict[str, Any]) -> Dict[str, Any]:
+        now = datetime.now(timezone.utc).isoformat()
         raw_id = event_data.get("id")
         try:
             if raw_id:

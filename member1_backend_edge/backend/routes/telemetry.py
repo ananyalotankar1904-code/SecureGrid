@@ -55,7 +55,11 @@ def ingest_telemetry(payload: TelemetryPayload):
     saved = db_service.save_telemetry(payload.model_dump())
 
     # 4. Optional ML analysis evaluation (if Member 2 module is loaded)
-    ml_service.evaluate_telemetry(payload.model_dump())
+    prediction_data = ml_service.evaluate_telemetry(payload.model_dump())
+    if prediction_data:
+        from member1_backend_edge.backend.models.prediction import PredictionCreate
+        from member1_backend_edge.backend.routes.predictions import submit_prediction
+        submit_prediction(PredictionCreate(**prediction_data))
 
     return TelemetryResponse(
         status="accepted",

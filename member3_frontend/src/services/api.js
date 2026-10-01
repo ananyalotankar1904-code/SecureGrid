@@ -384,8 +384,24 @@ export async function checkApiHealth() {
 export async function getDashboardSummary() {
   if (isLiveApiAvailable) {
     try {
-      const res = await fetch(`${API_BASE_URL}/summary`);
-      if (res.ok) return await res.json();
+      const devices = await getDevices();
+      const total = devices.length;
+      const healthy = devices.filter(d => d.status === 'Healthy').length;
+      const warning = devices.filter(d => d.status === 'Warning').length;
+      const threat = devices.filter(d => d.status === 'Threat').length;
+      const quarantined = devices.filter(d => d.status === 'Quarantined').length;
+      const avgTrustScore = total ? Math.round(devices.reduce((sum, d) => sum + d.trustScore, 0) / total) : 100;
+
+      return {
+        totalDevices: total,
+        healthyDevices: healthy,
+        monitoringDevices: warning,
+        activeThreats: threat,
+        quarantinedDevices: quarantined,
+        avgTrustScore,
+        lastUpdated: new Date().toLocaleTimeString(),
+        isLiveApi: true
+      };
     } catch (e) {
       console.warn('Falling back to mock dataset for summary:', e);
     }
@@ -407,15 +423,58 @@ export async function getDashboardSummary() {
     quarantinedDevices: quarantined,
     avgTrustScore,
     lastUpdated: new Date().toLocaleTimeString(),
-    isLiveApi: isLiveApiAvailable
+    isLiveApi: false
   };
 }
 
 export async function getDevices() {
   if (isLiveApiAvailable) {
     try {
-      const res = await fetch(`${API_BASE_URL}/devices`);
-      if (res.ok) return await res.json();
+      const [devRes, predRes, telRes] = await Promise.all([
+        fetch(`${API_BASE_URL}/devices?limit=100`),
+        fetch(`${API_BASE_URL}/predictions?limit=100`),
+        fetch(`${API_BASE_URL}/telemetry?limit=100`)
+      ]);
+      if (devRes.ok && predRes.ok && telRes.ok) {
+        const [devData, predData, telData] = await Promise.all([devRes.json(), predRes.json(), telRes.json()]);
+        
+        const devices = devData.items || [];
+        const predictions = predData.items || [];
+        const telemetries = telData.items || [];
+        
+        return devices.map(d => {
+          const pred = predictions.find(p => p.device_id === d.device_id) || {};
+          const tel = telemetries.find(t => t.device_id === d.device_id) || {};
+          
+          return {
+            id: d.device_id,
+            name: d.device_name,
+            type: d.device_type,
+            location: d.location,
+            status: d.status === 'ACTIVE' ? (pred.trust_status === 'COMPROMISED' ? 'Threat' : pred.trust_status === 'ELEVATED_RISK' ? 'Warning' : 'Healthy') : (d.status === 'QUARANTINED' ? 'Quarantined' : 'Healthy'),
+            trustScore: pred.trust_score !== undefined ? Math.round(pred.trust_score) : 100,
+            powerKw: tel.power_kw || 0,
+            baselinePowerKw: pred.predicted_load_kw || 0,
+            voltageV: tel.voltage || 220,
+            currentA: tel.current || 0,
+            frequencyHz: 60,
+            anomalyType: pred.anomaly_type || 'Normal',
+            anomalies: {
+              energy: (pred.reasons || []).includes('ENERGY_ANOMALY'),
+              network: (pred.reasons || []).includes('NETWORK_ANOMALY'),
+              ddos: (pred.reasons || []).includes('NETWORK_ANOMALY'),
+              auth: (pred.reasons || []).includes('AUTH_ANOMALY'),
+              combined: (pred.reasons || []).length > 1
+            },
+            recommendation: d.status === 'QUARANTINED' ? 'QUARANTINE' : (pred.trust_status === 'COMPROMISED' ? 'RESTRICT' : pred.trust_status === 'ELEVATED_RISK' ? 'MONITOR' : 'ALLOW'),
+            lastSeen: new Date(d.updated_at || tel.timestamp || Date.now()).toLocaleTimeString(),
+            ipAddress: d.ip_address || '0.0.0.0',
+            firmware: d.firmware_version || 'v1.0',
+            explanation: (pred.reasons || []).join(', ') || 'System operating normally.',
+            trustHistory: []
+          };
+        });
+      }
     } catch (e) {
       console.warn('Falling back to mock dataset for devices:', e);
     }
@@ -426,8 +485,21 @@ export async function getDevices() {
 export async function getThreatEvents() {
   if (isLiveApiAvailable) {
     try {
-      const res = await fetch(`${API_BASE_URL}/threats`);
-      if (res.ok) return await res.json();
+      const res = await fetch(`${API_BASE_URL}/security/events?limit=50`);
+      if (res.ok) {
+        const data = await res.json();
+        return (data.items || []).map(e => ({
+          id: e.id,
+          timestamp: new Date(e.timestamp).toLocaleString(),
+          deviceId: e.device_id,
+          anomalyType: e.event_type.replace('ML_ANOMALY_ALERT', 'COMBINED').replace('_DETECTED', ''),
+          severity: e.severity,
+          trustScore: e.details?.trust_score || 0,
+          recommendation: e.severity === 'CRITICAL' ? 'QUARANTINE' : e.severity === 'HIGH' ? 'RESTRICT' : 'MONITOR',
+          status: e.mitigated ? 'RESOLVED' : 'ACTIVE',
+          details: e.description
+        }));
+      }
     } catch (e) {
       console.warn('Falling back to mock dataset for threat events:', e);
     }
